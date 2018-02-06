@@ -1,35 +1,86 @@
-<?php global $vital_mage_wp; ?>
+<?php global $vital_mage_wp;
+if(current_user_can('administrator') ) :
+	$tab_active = 'settings';
+else :
+	$tab_active = 'sync';
+endif;?>
 
 <div class="wrap clearfix">
-	<?php if(isset($_POST['sync-product']) && $_POST['sync-product']):
+	<?php if(isset($_POST['magento-sync']) && $_POST['magento-sync']):
+		$tab_active = 'sync';
+		$sync_type = sanitize_text_field( $_POST['magento-sync'] );
 		$mage_php_url = $this->get_mage_path();
 
-	    if ( !empty( $mage_php_url ) && file_exists( $mage_php_url ) && !is_dir( $mage_php_url )) :
+		//Check if the magento avialable
+		if ( !empty( $mage_php_url ) && file_exists( $mage_php_url ) && !is_dir( $mage_php_url )) :
 	        // Include Magento's Mage.php file
 	        require_once ( $mage_php_url );
 	       	umask(0);
 			Mage::app();
 	    endif;
-		$visibility = array(
-						   Mage_Catalog_Model_Product_Visibility::VISIBILITY_BOTH,
-						   Mage_Catalog_Model_Product_Visibility::VISIBILITY_IN_CATALOG
-						);
 
-		$category = Mage::getModel('catalog/category');
-		$productCollection = $category->getProductCollection()
-								->addAttributeToSelect('*')
-								->addAttributeToFilter('status', array('eq' => 1))
-								->addAttributeToFilter('visibility', $visibility);
+		//If the sync type is product
+		if($sync_type === 'product') :
+			$visibility = array(
+							   Mage_Catalog_Model_Product_Visibility::VISIBILITY_BOTH,
+							   Mage_Catalog_Model_Product_Visibility::VISIBILITY_IN_CATALOG
+							);
 
-		$storeProduct = '';
-		foreach ($productCollection as $_product) {
-			$storeProduct[$_product->getId()] = array('sku' => $_product->getSku(), 'name' => $_product->getName(), 'categories' => $_product->getCategoryIds());
-		}
+			$category = Mage::getModel('catalog/category');
+			$productCollection = $category->getProductCollection()
+									->addAttributeToSelect('*')
+									->addAttributeToFilter('status', array('eq' => 1))
+									->addAttributeToFilter('type_id', array('eq' => 'grouped'))
+									->addAttributeToFilter('visibility', $visibility);
 
-		$status = file_put_contents(WP_PLUGIN_DIR.'/acf-magento-product/fields/products.json', json_encode($storeProduct));
+			$storeProduct = '';
+			foreach ($productCollection as $_product) {
+				$storeProduct[$_product->getId()] = array('sku' => $_product->getSku(), 'name' => $_product->getName(), 'categories' => $_product->getCategoryIds());
+			}
+
+			$status = file_put_contents(WP_PLUGIN_DIR.'/acf-magento-product/fields/products.json', json_encode($storeProduct));
+		else :
+			//If the sync type is Category
+			$_helper = Mage::helper('catalog/category');
+		    $categoryCollection = $_helper->getStoreCategories();
+
+		    $storeCategories = array();
+		    $loop = 0;
+			foreach($categoryCollection as $_category) : $_category = Mage::getModel('catalog/category')->load($_category->getId());
+			    $storeCategories[$loop]['id'] = $_category->getId();
+			    $storeCategories[$loop]['name'] = $_category->getName();
+			    $_subcategories = $_category->getChildrenCategories();
+			    if (count($_subcategories) > 0) :
+			        $subCategories = array();
+			        $subLoop = 0;
+			        foreach($_subcategories as $_subcategory) :
+			            $_subcategory = Mage::getModel('catalog/category')->load($_subcategory->getId());
+			            $subCategories[$subLoop]['id'] = $_subcategory->getId();
+			            $subCategories[$subLoop]['name'] = $_subcategory->getName();
+			            $_sub_subcategories = $_subcategory->getChildrenCategories();
+			            if (count($_sub_subcategories) > 0) :
+			                $subSubCategory = array();
+			                $subSubLoop = 0;
+			                foreach($_sub_subcategories as $_sub_subcategory) :
+			                    $_sub_subcategory = Mage::getModel('catalog/category')->load($_sub_subcategory->getId());
+			                    $subSubCategory[$subSubLoop]['id'] = $_sub_subcategory->getId();
+			                    $subSubCategory[$subSubLoop]['name'] = $_sub_subcategory->getName();
+			                    $subSubLoop++;
+			                endforeach;
+			                $subCategories[$subLoop]['child-list'] = $subSubCategory;
+			            endif;
+			            $subLoop++;
+			        endforeach;
+			        $storeCategories[$loop]['child-list'] = $subCategories;
+			    endif;
+			    $loop++;
+			endforeach;
+
+			$status = file_put_contents(WP_PLUGIN_DIR.'/acf-magento-category/fields/categories.json', json_encode($storeCategories));
+		endif;
 		if($status): ?>
 			<div class="notice notice-success is-dismissible">
-				<p><?php _e('Products successfully synced', $vital_mage_wp->slug); ?></p>
+				<p><?php _e('Data successfully synced', $vital_mage_wp->slug); ?></p>
 			</div>
 		<?php else:?>
 			<div class="notice notice-error is-dismissible">
@@ -37,9 +88,33 @@
 			</div>
 		<?php endif; ?>
 	<?php endif;?>
-	<div id="mwi_left">
-		<div class="fleft">
-			<h2 class="mwi-title"><?php echo $vital_mage_wp->name; ?></h2>
+	<h1 class="mwi-title"><?php echo $vital_mage_wp->name; ?></h1>
+
+	<div class="nav-tab-wrapper">
+		<?php if(current_user_can('administrator') ) : ?>
+			<a href="#mage-wp-settings" class="nav-tab<?php echo ($tab_active === 'settings') ? ' nav-tab-active' : '' ;?>">Settings</a>
+		<?php endif; ?>
+		<a href="#sync-product-category" class="nav-tab<?php echo ($tab_active === 'sync') ? ' nav-tab-active' : '' ;?>">Sync Products/Categories</a>
+	</div>
+	<script>
+		// Change tab on click.
+		jQuery( '.nav-tab-wrapper .nav-tab[href^="#"]' ).click( function(e){ /* ignores any non hashtag links since they go direct to a URL... */
+
+			e.preventDefault();
+
+			// Hide all tab blocks.
+			thisTabBlock = jQuery(this).closest( '.nav-tab-wrapper' );
+			// Update selected tab.
+			thisTabBlock.find( '.nav-tab-active' ).removeClass( 'nav-tab-active' );
+			jQuery(this).addClass( 'nav-tab-active' );
+
+			// Show the correct tab block.
+			jQuery( '.tab-content' ).removeClass('tab-content-active');
+			jQuery( jQuery(this).attr( 'href' ) ).addClass('tab-content-active');
+		});
+	</script>
+	<?php if(current_user_can('administrator') ) : ?>
+		<div id="mage-wp-settings" class="tab-content mage-wp-settings<?php echo ($tab_active === 'settings') ? ' tab-content-active' : '' ;?>">
 			<form method="post" action="options.php">
     			<?php settings_fields('vital-magewp-main-settings'); ?>
 
@@ -186,18 +261,28 @@
 
             </form>
 
-		</div><!-- /fleft -->
-	</div><!-- /#mwi_left -->
-	<div class="update-magento-product">
-		<h2>Sync Magento Products Data</h2>
-		<div class="product-progress">
-			<form method="post" action="">
-				<p>You can sync the Magento product data for ACF Magento Products</p>
-				<input type="hidden" name="sync-product" value="1" />
-				<p class="submit">
-					<input type="submit" class="button-primary" value="<?php _e('Sync Products Data', $vital_mage_wp->slug); ?>" />
-				</p>
-			</form>
 		</div>
+	<?php endif;?>
+	<div id="sync-product-category" class="tab-content sync-product-category<?php echo ($tab_active === 'sync') ? ' tab-content-active' : '' ;?>">
+		<form method="post" action="">
+			<div class="postbox mwi_settings">
+				<div class="inside sync-progress">
+					<p>You can sync the Magento Category/Product data for ACF Magento Fields</p>
+					<div class="fieldset">
+						<div class="field">
+							<input type="radio" id="magento-sync-category" name="magento-sync" value="category" />
+							<label for="magento-sync-category">Category</label>
+						</div>
+						<div class="field">
+							<input type="radio" id="magento-sync-product" name="magento-sync" value="product" />
+							<label for="magento-sync-product">Product</label>
+						</div>
+					</div>
+				</div>
+			</div>
+			<p class="submit">
+				<input type="submit" class="button-primary" value="<?php _e('Sync Data', $vital_mage_wp->slug); ?>" />
+			</p>
+		</form>
 	</div>
 </div>

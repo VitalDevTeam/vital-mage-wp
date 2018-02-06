@@ -1,5 +1,28 @@
 h2.mwi-title{
     margin:0 0 25px;
+    font-weight: 600;
+}
+.nav-tab-wrapper {
+    border: none;
+}
+.nav-tab-active,
+.nav-tab-active:focus{
+    background: #fff;
+    box-shadow: none;
+}
+.tab-content {
+    display: none;
+}
+.tab-content-active {
+    display: block;
+}
+.postbox.mwi_settings{
+    width: 100%;
+    display: inline-block;
+    border: none;
+}
+.postbox .inside {
+    margin: 20px;
 }
 .form-table em{
     font-size:11px;
@@ -189,4 +212,10 @@ html[xmlns] .clearfix{
 #svc_repeaters .first_row td{
     padding:0 10px;
     border-top:none;
+}
+.sync-product-category .field {
+    padding: 10px 0;
+}
+.sync-product-category .field label {
+    vertical-align: top;
 }

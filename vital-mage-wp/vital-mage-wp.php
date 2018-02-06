@@ -18,7 +18,7 @@ class vital_mage_wp {
     public $plugin_url;
     public $helpers;
 
-/**	=============================
+/*	=============================
     *
     * Construct the plugin
     *
@@ -35,7 +35,7 @@ class vital_mage_wp {
 
     }
 
-/**	=============================
+/*	=============================
     *
     * Initiate Plugin
     *
@@ -58,7 +58,7 @@ class vital_mage_wp {
         }
 	}
 
-/**	=============================
+/*	=============================
     *
     * Get Layout
     *
@@ -99,7 +99,7 @@ class vital_mage_wp {
         return $layout;
     }
 
-/**	=============================
+/*	=============================
     *
     * Get App
     *
@@ -121,7 +121,7 @@ class vital_mage_wp {
 
     }
 
-/**	=============================
+/*	=============================
     *
     * Get Value
     *
@@ -152,7 +152,7 @@ class vital_mage_wp {
 
 	}
 
-/**	=============================
+/*	=============================
     *
     * Initiate Mage
     *
@@ -195,7 +195,7 @@ class vital_mage_wp {
 
 	}
 
-/**	=============================
+/*	=============================
     *
     * Add Settings Page
     *
@@ -203,13 +203,13 @@ class vital_mage_wp {
 
 	public function add_settings_page() {
 
-		$page = add_options_page( $this->name, $this->shortname, 'administrator', $this->slug, array(&$this, 'render_settings_page') );
+		$page = add_options_page( $this->name, $this->shortname, 'edit_posts', $this->slug, array(&$this, 'render_settings_page') );
 		add_action( 'admin_init', array(&$this, 'register_vital_magewp_settings') );
 		add_action( 'admin_print_styles-' . $page, array(&$this, 'admin_styles') );
 
 	}
 
-/**	=============================
+/*	=============================
     *
     * Render Settings Page
     *
@@ -228,7 +228,7 @@ class vital_mage_wp {
 
 	}
 
-/**	=============================
+/*	=============================
     *
     * Check Mage.php
     *
@@ -286,7 +286,7 @@ class vital_mage_wp {
 
 	}
 
-/**	=============================
+/*	=============================
     *
     * Get Mage.php Path
     *
@@ -310,7 +310,7 @@ class vital_mage_wp {
 
 	}
 
-/**	=============================
+/*	=============================
     *
     * Check functions.php
     *
@@ -325,7 +325,7 @@ class vital_mage_wp {
         return file_exists($apppath.'code/local/Mage/Core/functions.php');
     }
 
-/**	=============================
+/*	=============================
     *
     * Validate WMI Settings
     *
@@ -339,7 +339,7 @@ class vital_mage_wp {
 
 	}
 
-/**	=============================
+/*	=============================
     *
     * Register MWI Settings
     *
@@ -351,16 +351,16 @@ class vital_mage_wp {
 
 	}
 
-/**	=============================
+/*	=============================
     *
     * Admin Styles
     *
     ============================= */
 
 	public function admin_styles() {
-
+        $style = plugins_url('assets/admin/css/admin.css', __FILE__);
         // styles
-        wp_register_style( 'mwi-admin-css', plugins_url('assets/admin/css/admin.css', __FILE__) );
+        wp_register_style( 'mwi-admin-css', $style, '',  4.9);
 		wp_enqueue_style( 'mwi-admin-css' );
 
 	}
